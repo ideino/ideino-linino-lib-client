@@ -1,4 +1,8 @@
-ideino-linino-lib-client
+Linino Lib Client Javascript
 ========================
 
-linino lib client
+#Introduction
+TODO
+
+#Getting Started
+TODO
