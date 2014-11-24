@@ -35,12 +35,108 @@ function connect(host)
 			var command = msg.command[key];
 			if(command.cmd == 'read')
 			{
-				var response = eval( "document.getElementById('"+command.id+"')."+command.param );
-				var json_response = {value: response};
-				socket.emit('read-back-' + command.id + '-' + command.param, json_response);
+				switch(command.id)
+				{
+					case "GEO": 
+						navigator.geolocation.getCurrentPosition(function(position) {
+						var lat = position.coords.latitude;
+						var lon = position.coords.longitude;
+						
+						var json_response = {value: lat+";"+lon};
+						socket.emit('read-back-' + command.id + '-' + command.param, json_response);
+						});
+						break;	
+					case "DEVO": 
+						if (window.DeviceOrientationEvent) {
+						  console.log("Device orientation supported");
+						  window.addEventListener('deviceorientation', function(orientation) {
+							var response;
+							var LR = orientation.gamma;
+							var FB = orientation.beta;
+							var dir = orientation.alpha
+
+							if(command.param == "LR")
+								response = LR;
+							if(command.param == "FB")
+								response = FB;
+							if(command.param == "dir")
+								response = dir;							
+							
+							var json_response = {value: response};
+							socket.emit('read-back-' + command.id + '-' + command.param, json_response);
+						  }, false);
+						} else {
+						  console.log("Device orientation NOT supported");
+						}
+						break;	
+					case "LIGHT": 
+						window.addEventListener('devicelight', function(light) {
+							var lightLevel = light.value;
+							var json_response = {value: lightLevel};
+							socket.emit('read-back-' + command.id + '-' + command.param, json_response);
+						});
+						break;
+					case "PROX": 
+					window.addEventListener('deviceproximity', function(event) {
+						var max = event.max;
+						var min = event.min;
+						var proximity = event.value;
+						
+						var json_response = {value: "min "+min+"- proximity : "+proximity+" - max : "+max};
+						socket.emit('read-back-' + command.id + '-' + command.param, json_response);
+					});
+						break; 
+					case "BATTERY": 
+							if(window.navigator.battery|| window.navigator.mozBattery)
+							{
+								var	response = window.navigator.battery.level * 100 + "%";
+								var	json_response = {value : response};
+								socket.emit('read-back-' + command.id + '-' + command.param, json_response);
+								window.navigator.battery.onlevelchange = function(){								
+											response = window.navigator.battery.level * 100 + "%";
+											json_response = {value : response};
+											socket.emit('read-back-' + command.id + '-' + command.param, json_response);
+										 }
+							}
+							else if(navigator.getBattery())
+								{
+									navigator.getBattery().then(function(battery){	
+										var response = battery.level * 100 + "%";
+										var json_response = {value : response};
+										socket.emit('read-back-' + command.id + '-' + command.param, json_response);
+										battery.onlevelchange = function(){								
+											response = battery.level * 100 + "%";
+											json_response = {value : response};
+											socket.emit('read-back-' + command.id + '-' + command.param, json_response);
+										 }
+									})
+								}				
+							else 
+								console.log("Battery Status API is not available");
+						break;
+					default :
+						var response = document.getElementById(command.id).getAttribute(command.param);
+						var json_response = {value: response};
+						socket.emit('read-back-' + command.id + '-' + command.param, json_response);
+				}
 			}
 			else if(command.cmd == 'write')
-				eval( "try{ document.getElementById('"+command.id+"')."+command.param+" = "+command.value +"}catch(error){ console.log(error);} ");
+				switch(command.id)
+				{
+					case "VIBRO":
+						navigator.vibrate(command.value);
+						break;
+					default:
+						try
+						{ 
+							document.getElementById(command.id).setAttribute(command.param , command.value);
+						}
+						catch(error)
+						{
+							console.log(error);
+						}
+				}
+				
 		});
 	});
 	socket.on('write', function(msg){
